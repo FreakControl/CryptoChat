@@ -40,7 +40,7 @@ class CryptoClient():
 		self.IP = raw_input("Please enter the IP address you wish to chat with: ")
 		self.PORT = int(raw_input("Enter the port for communication: "))
 		self.EncryptKeyXOR = raw_input("Enter desired key for XOR encryption: ")
-		self.EncryptKeyAES = hashlib.md5(raw_input("Enter a secure passphrase for AES")).hexdigest()
+		self.EncryptKeyAES = hashlib.md5(raw_input("Enter a secure passphrase for AES: ")).hexdigest()
 		###Shit for AES padding
 		BS = 16
 		self.pad = lambda s: s + (BS - len(s) % BS) * chr(BS - len(s) % BS) 
@@ -78,25 +78,27 @@ class CryptoClient():
 		return data
 	def SendMSG(self):
 		clientsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+		print
+		print "You are now talking to '"+self.IP+"'"
 		while 1:
 			message = raw_input("")
 			if message.startswith("/send"): #send file command
 				self.SendFILE(message.split(" ")[1])
+				continue
 			if message=="/leave":
-				message = self.EncryptMSG("LEAVE")
+				message = self.EncryptMSG("\x03")
 				clientsock.sendto(message, (self.IP, self.PORT))
 				sys.exit(0)
+			if message.startswith("/msg"):
+				self.IP=message.split(" ")[1]
+				print "You are now talking to '"+self.IP+"'"
+				continue
 			else:
-				message = self.EncryptMSG("MSG"+message)
+				message = self.EncryptMSG("\x01"+message)
 				clientsock.sendto(message, (self.IP, self.PORT))
 	def SendFILE(self,file_):
 		clientsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-		try:
-			ext = file_.split(".")[1]
-		except:
-			print "No extension! Using txt instead..." #derp
-			ext="txt"
-		data="FILE"+str(len(ext))+ext
+		data="\x02"+file_+"\xFF"
 		f=open(file_,"rb")
 		data+=f.read()
 		f.close()
@@ -109,30 +111,32 @@ class CryptoClient():
 		serversocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #UDP
 		serversocket.bind((self.IP, self.PORT))
 		while 1:
-			(data, addr) = serversocket.recvfrom(1024*1024*1024) # buffer size is 1 gbit (for large files/images)
+			(data, addr) = serversocket.recvfrom(1073741824) # buffer size is 1 gbit (for large files/images)
 			data = self.DecryptMSG(data)
-			if data.startswith("FILE"):
+			if data.startswith("\x02"):
+				filename=''
 				data=list(data)
-				extlength = int(data[4])
-				ext=''
-				for i in range(5,extlength):
-					ext+=data[i]
-					del data[i]
-				print addr[0] + " has sent a " + ext + " file!"
-				FileName = self.RandStr(8)
-				print "Downloading as " + FileName + "." + ext + " ..." #fuck file names as they could tell something about the file
-				del data[:4]
+				del data[0]
+				for i in data:
+					if i=="\xFF":
+						break
+					else:
+						filename += i
+				del data[0] # delete protocol char
+				del data[:len(filename)] # delete file end char
+				print addr[0] + " has sent " + filename
+				print "Downloading..." #download dat shit
 				data=''.join(data)
-				f = open(FileName+"."+ext,"wb")
+				f = open(filename,"wb")
 				f.write(data)
 				f.close()
 				print "Saved."
-			elif data.startswith("MSG"): # all messages start with "msg" to prevent file spamming
+			elif data.startswith("\x01"): # all messages start with "\x01" to prevent file spamming
 				data=list(data)
-				del data[:3]
+				del data[0]
 				data=''.join(data)
 				print addr[0]+">	|	"+data
-			elif data.startswith("LEAVE"):
+			elif data.startswith("\x03"):
 				print addr[0]+" has left."
 				sys.exit(0)
 
