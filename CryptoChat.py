@@ -33,14 +33,19 @@ import hashlib
 from Crypto.Cipher import AES
 from Crypto import Random
 from threading import Thread
+import getpass
 class CryptoClient():
 	def __init__(self):
 		print "Welcome to CryptoChat, a secure P2P chat client coded by Freak"
 		print "if you dont know what your doing read the README.md!!!"
 		self.IP = raw_input("Please enter the IP address you wish to chat with: ")
 		self.PORT = int(raw_input("Enter the port for communication: "))
-		self.EncryptKeyXOR = raw_input("Enter desired key for XOR encryption: ")
-		self.EncryptKeyAES = hashlib.md5(raw_input("Enter a secure passphrase for AES: ")).hexdigest()
+		print
+		print "Now enter the keys for the different encryption methods, make sure they are different."
+		print "Please note they will note be printed for your security."
+		print
+		self.EncryptKeyXOR = getpass.getpass("Enter desired key for XOR encryption: ")
+		self.EncryptKeyAES = getpass.getpass(raw_input("Enter a secure passphrase for AES: ")).hexdigest()
 		###Shit for AES padding
 		BS = 16
 		self.pad = lambda s: s + (BS - len(s) % BS) * chr(BS - len(s) % BS) 
