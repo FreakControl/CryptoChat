@@ -45,7 +45,7 @@ class CryptoClient():
 		print "Please note they will note be printed for your security."
 		print
 		self.EncryptKeyXOR = getpass.getpass("Enter desired key for XOR encryption: ")
-		self.EncryptKeyAES = getpass.getpass(raw_input("Enter a secure passphrase for AES: ")).hexdigest()
+		self.EncryptKeyAES = hashlib.md5(getpass.getpass("Enter a secure passphrase for AES: ")).hexdigest()
 		###Shit for AES padding
 		BS = 16
 		self.pad = lambda s: s + (BS - len(s) % BS) * chr(BS - len(s) % BS) 
