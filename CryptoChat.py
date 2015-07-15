@@ -9,6 +9,8 @@
 # Author:      Freak @ PopulusControl (aka sudoer)
 #
 # Created:     21/02/2015
+# Last update: 14/07/2015
+#
 # Copyright:   (c) Freak 2015
 # Licence:     GPLv3
 #    This program is free software: you can redistribute it and/or modify
@@ -96,20 +98,23 @@ class CryptoClient():
 				sys.exit(0)
 			if message.startswith("/msg"):
 				self.IP=message.split(" ")[1]
-				print "You are now talking to '"+self.IP+"'"
+				print "[CLIENT] You are now talking to '"+self.IP+"'"
 				continue
 			else:
 				message = self.EncryptMSG("\x01"+message)
 				clientsock.sendto(message, (self.IP, self.PORT))
 	def SendFILE(self,file_):
-		clientsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-		data="\x02"+file_+"\xFF"
-		f=open(file_,"rb")
-		data+=f.read()
-		f.close()
-		data = self.EncryptMSG(data)
-		clientsock.sendto(data, (self.IP, self.PORT))
-		print "File Sent!"
+		if file_.startswith(".") or file_.startswith("/"): #added security measure.
+			print "[CLIENT] For security and safety reasons, filenames starting with '.' or '/' will not be sent. Aborting."
+		else:
+			clientsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+			data="\x02"+file_+"\xFF"
+			f=open(file_,"rb")
+			data+=f.read()
+			f.close()
+			data = self.EncryptMSG(data)
+			clientsock.sendto(data, (self.IP, self.PORT))
+			print "[CLIENT] File Sent!"
 	def RandStr(self,length):
 		return ''.join(random.choice(string.letters) for _ in range(length))
 	def RecvMSG(self):
@@ -129,20 +134,23 @@ class CryptoClient():
 						filename += i
 				del data[0] # delete protocol char
 				del data[:len(filename)] # delete file end char
-				print addr[0] + " has sent " + filename
-				print "Downloading..." #download dat shit
-				data=''.join(data)
-				f = open(filename,"wb")
-				f.write(data)
-				f.close()
-				print "Saved."
+				if filename.startswith(".") or filename.startswith("/"): #attempted exploit!
+					print "[!!!ALERT!!!] "+addr[0] + " has attempted to overwrite your " + filename
+				else:
+					print "[CLIENT] " + addr[0] + " has sent " + filename
+					print "[CLIENT] Downloading..." #download dat shit
+					data=''.join(data)
+					f = open(filename,"wb")
+					f.write(data)
+					f.close()
+					print "[CLIENT] Saved."
 			elif data.startswith("\x01"): # all messages start with "\x01" to prevent file spamming
 				data=list(data)
 				del data[0]
 				data=''.join(data)
-				print addr[0]+">	|	"+data
+				print "["+addr[0]+"] >	|	"+data
 			elif data.startswith("\x03"):
-				print addr[0]+" has left."
+				print "[CLIENT] "+addr[0]+" has left."
 				sys.exit(0)
 
 if __name__=="__main__":
